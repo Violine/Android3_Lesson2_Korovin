@@ -10,8 +10,6 @@ import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -19,7 +17,13 @@ import io.reactivex.BackpressureStrategy;
 import io.reactivex.Flowable;
 import io.reactivex.FlowableEmitter;
 import io.reactivex.FlowableOnSubscribe;
+import io.reactivex.Observable;
+import io.reactivex.ObservableEmitter;
+import io.reactivex.ObservableOnSubscribe;
+import io.reactivex.Observer;
+import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Cancellable;
+import io.reactivex.subjects.PublishSubject;
 import io.reactivex.subscribers.DisposableSubscriber;
 
 public class MainActivity extends AppCompatActivity {
@@ -44,6 +48,42 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         initView();
+
+        Observable<String> firstObservable = Observable.create(new ObservableOnSubscribe<String>() {
+            @Override
+            public void subscribe(ObservableEmitter<String> emitter) throws Exception {
+
+            }
+        });
+
+        PublishSubject<String> subject = PublishSubject.create();
+        subject.subscribe(getNewObserver(1));
+        subject.subscribe(getNewObserver(2));
+
+
+    }
+    public Observer<String> getNewObserver (final int observerIndex) {
+        return new Observer<String>() {
+            @Override
+            public void onSubscribe(Disposable d) {
+                Log.d("TAG_"+observerIndex, "onSubscribe");
+            }
+
+            @Override
+            public void onNext(String s) {
+                Log.d("TAG_"+observerIndex, "onNext");
+            }
+
+            @Override
+            public void onError(Throwable e) {
+                Log.d("TAG_"+observerIndex, "onError");
+            }
+
+            @Override
+            public void onComplete() {
+                Log.d("TAG_"+observerIndex, "onComplete");
+            }
+        };
     }
 
     @SuppressLint("CheckResult")
