@@ -6,17 +6,24 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.AppCompatEditText;
-import android.support.v7.widget.Toolbar;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.View;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.widget.TextView;
+import android.widget.Toast;
+
 import io.reactivex.BackpressureStrategy;
 import io.reactivex.Flowable;
 import io.reactivex.FlowableEmitter;
 import io.reactivex.FlowableOnSubscribe;
+import io.reactivex.Observable;
+import io.reactivex.ObservableEmitter;
+import io.reactivex.ObservableOnSubscribe;
+import io.reactivex.Observer;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.functions.Cancellable;
+import io.reactivex.subjects.PublishSubject;
 import io.reactivex.subscribers.DisposableSubscriber;
 
 public class MainActivity extends AppCompatActivity {
@@ -31,8 +38,6 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Toolbar toolbar = findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
 
         FloatingActionButton fab = findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
@@ -43,6 +48,42 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         initView();
+
+        Observable<String> firstObservable = Observable.create(new ObservableOnSubscribe<String>() {
+            @Override
+            public void subscribe(ObservableEmitter<String> emitter) throws Exception {
+
+            }
+        });
+
+        PublishSubject<String> subject = PublishSubject.create();
+        subject.subscribe(getNewObserver(1));
+        subject.subscribe(getNewObserver(2));
+
+
+    }
+    public Observer<String> getNewObserver (final int observerIndex) {
+        return new Observer<String>() {
+            @Override
+            public void onSubscribe(Disposable d) {
+                Log.d("TAG_"+observerIndex, "onSubscribe");
+            }
+
+            @Override
+            public void onNext(String s) {
+                Log.d("TAG_"+observerIndex, "onNext");
+            }
+
+            @Override
+            public void onError(Throwable e) {
+                Log.d("TAG_"+observerIndex, "onError");
+            }
+
+            @Override
+            public void onComplete() {
+                Log.d("TAG_"+observerIndex, "onComplete");
+            }
+        };
     }
 
     @SuppressLint("CheckResult")
@@ -57,8 +98,9 @@ public class MainActivity extends AppCompatActivity {
                     observer = getObserver(textView);
                     observable.subscribe(observer);
                 } else {
-                    if (observable != null && observer != null){
-                        // отписываемся
+                    if (observable != null && observer != null) {
+                        if (!observer.isDisposed())
+                            observer.dispose();
                     }
 
                 }
@@ -73,19 +115,28 @@ public class MainActivity extends AppCompatActivity {
                 TextWatcher textWatcher = new TextWatcher() {
                     @Override
                     public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-
                     }
 
                     @Override
                     public void onTextChanged(CharSequence s, int start, int before, int count) {
-
+                        if (start < s.length()) {
+                            char lastChar = s.charAt(start);
+                            emitter.onNext(String.valueOf(lastChar));
+                        } else emitter.onError(new Throwable("Ошибка"));
                     }
 
                     @Override
                     public void afterTextChanged(Editable s) {
-                        emitter.onNext(s.toString());
+
                     }
                 };
+
+                emitter.setCancellable(new Cancellable() {
+                    @Override
+                    public void cancel() throws Exception {
+                        editText.addTextChangedListener(null);
+                    }
+                });
                 editText.addTextChangedListener(textWatcher);
             }
         }, BackpressureStrategy.BUFFER);
@@ -106,32 +157,8 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onError(Throwable t) {
-
+                Toast.makeText(MainActivity.this, t.getMessage(), Toast.LENGTH_SHORT).show();
             }
         };
-    }
-
-
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_main, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
-        }
-
-        return super.onOptionsItemSelected(item);
     }
 }
